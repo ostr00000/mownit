@@ -287,9 +287,9 @@ def test_SOR_factor(end_fun: End_fun_sig,
     data = []
 
     if not interval:
-        interval or list(float(j) / SOR_SCALE
-                         for j in range(-3 * SOR_SCALE, 3 * SOR_SCALE + 1, 1)
-                         if j != 0)
+        interval = list(float(j) / SOR_SCALE
+                        for j in range(-3 * SOR_SCALE, 3 * SOR_SCALE + 1, 1)
+                        if j != 0)
     for w in interval:
         logger.info("SOR parameter: {}".format(w))
         data.append(single_test(DEFAULT_MATRIX_SIZE, end_fun,
@@ -318,7 +318,3 @@ if __name__ == "__main__":
     logger.addHandler(handler)
 
     experiment()
-
-    #test_SOR_factor(end_function_1)
-
-    test_SOR_factor(end_function_1, interval=list(np.linspace(0.01, 2, 50)))
