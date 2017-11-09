@@ -64,9 +64,6 @@ def a1(x):
     return x*x-4
 
 
-
-
-
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     handler = logging.FileHandler('results.txt', mode='w')
@@ -80,6 +77,7 @@ if __name__ == "__main__":
     x = np.linspace(-10, 10, 1000)
     y = list(fun(i) for i in x)
 
-    plt.plot(x, y, label="f(x)")
+    plt.plot(x, y, label="f(x)=x^2+4")
     plt.plot((-10, 10), (0, 0), label="f(x)=0")
+    plt.legend(loc='lower left')
     plt.show()

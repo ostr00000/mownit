@@ -1,5 +1,5 @@
 import logging
-import matrix_util as mu
+import lab2.matrix_util as mu
 import numpy as np
 import matplotlib.pyplot as plt
 from typing import Callable, Tuple, List

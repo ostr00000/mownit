@@ -1,4 +1,4 @@
-import precision
+import lab1.precision as precision
 from random import choice
 import matplotlib.pyplot as plt
 import copy

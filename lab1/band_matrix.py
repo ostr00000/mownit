@@ -1,5 +1,5 @@
-import precision
-import matrix_gauss as mg
+import lab1.precision as precision
+import lab1.matrix_gauss as mg
 import logging
 import copy
 import matplotlib.pyplot as plt
