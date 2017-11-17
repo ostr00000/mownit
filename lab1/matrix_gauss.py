@@ -1,5 +1,5 @@
 import lab1.precision as precision
-from random import choice
+from random import choice, seed
 import matplotlib.pyplot as plt
 import copy
 import itertools
@@ -38,6 +38,7 @@ def get_matrix(fun, n):
 
 def get_vertical_vector_x(n, random=lambda: choice((-1, 1))):
     assert n >= 1
+    seed(7)
     return [[number(random())] for _ in range(n)]
 
 
@@ -129,7 +130,7 @@ def single_test(fun, n):
     return distance
 
 
-def experiment(fun, max_size=50):
+def experiment(fun, max_size=20):
     data = {}
 
     for float_name, float_type in precision.floating_point_types.items():
@@ -147,8 +148,9 @@ def experiment(fun, max_size=50):
 
     plt.subplot(111)
     plt.semilogy()
-    plt.title('Error function of matrix the size')
-    plt.ylabel('maximum metric')
+    plt.title('Funkcja błędu od rozmiaru macierzy')
+    plt.ylabel('Błąd w metryce maksimum')
+    plt.xlabel('Rozmiar macierzy')
     for float_name in precision.floating_point_types.keys():
         plt.plot(range(1, max_size + 1), data[float_name], label=float_name)
 
@@ -165,5 +167,11 @@ if __name__ == "__main__":
 
     print(sys.argv)
 
-    matrix_fun = a1 if len(sys.argv) == 1 else a2
-    experiment(matrix_fun, 100)
+    if len(sys.argv) == 1:
+        matrix_fun = a1
+        m_size = 25
+    else:
+        matrix_fun = a2
+        m_size = 100
+
+    experiment(matrix_fun, m_size)

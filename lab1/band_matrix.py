@@ -136,6 +136,7 @@ def experiment(fun, max_size=50):
         plt.subplot(111)
         plt.title(title)
         plt.ylabel(label)
+        plt.xlabel("Rozmiar macierzy A")
         if is_log:
             plt.semilogy()
 
@@ -147,16 +148,17 @@ def experiment(fun, max_size=50):
                      list(gen(float_n, False)),
                      label=float_n + ' thomas')
 
-        plt.legend(loc='upper left')
+        #plt.legend(loc='upper left')
+        plt.tight_layout()
         plt.savefig(filename)
         plt.show()
 
-    plot_data(0, "distance.pdf", True, "maximum metric",
-              "Error function of the matrix size")
-    plot_data(1, "time.pdf", False, "time [sec]",
-              "Estimating time function depending on the matrix size")
-    plot_data(2, "size.pdf", False, "size [bytes]",
-              "Data size function of the matrix size")
+    plot_data(0, "distance.pdf", True, "Błąd w metryce maksimum",
+              "Funkcja błędu algorythmu Thomasa od wielkości macierzy")
+    plot_data(1, "time.pdf", False, "Czas obliczania [s]",
+              "Funkcja długości czasu obliczania od wielkości macierzy")
+    plot_data(2, "size.pdf", False, "Rozmiar struktury [bajt]",
+              "Rozmiar struktury danych od wielkości macierzy")
 
 
 if __name__ == "__main__":

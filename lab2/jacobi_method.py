@@ -2,6 +2,7 @@ import logging
 import lab2.matrix_util as mu
 import numpy as np
 import matplotlib.pyplot as plt
+from time import time
 from typing import Callable, Tuple, List
 
 Mat = List[List]
@@ -12,7 +13,7 @@ Method_signature = Callable[[Mat, Mat, End_fun_ret, Mat, float], Method_stats]
 
 logger = logging.getLogger(__name__)
 MAX_ITER = 200
-MAX_POW_EPS = 20
+MAX_POW_EPS = 24
 MAX_INIT_NUM_POW = 15
 DEFAULT_EPSILON = 1e-6
 DEFAULT_MATRIX_SIZE = 100
@@ -148,19 +149,6 @@ def a1(n: int, k: int = 11, m: int = 2) -> Callable[[int, int], float]:
     return inner
 
 
-def a2(_, k=10, m=1):
-    def inner(i, j):
-        if i == j:
-            return k
-        elif i < j:
-            return (-1 if j % 2 == 1 else 1) * m / j
-        elif j == i - 1:
-            return m / i
-        else:
-            return 0
-    return inner
-
-
 def single_test(matrix_size: int,
                 end_fun: End_fun_sig,
                 epsilon: float = DEFAULT_EPSILON,
@@ -176,38 +164,45 @@ def single_test(matrix_size: int,
     logger.debug("B: {}".format(B))
 
     end = end_fun(epsilon, A, B)
+
+    time0 = time()
     X, iterations, rad = method(A, B, end, initial_guess, factor)
+    time1 = time()
+
     distance = mu.get_distance(X, x)
+    total_time = time1 - time0
 
     logger.debug("X: {}".format(X))
-    logger.debug("maximum metric {}".format(distance))
+    logger.debug("Błąd w metryce maksimu{}".format(distance))
     logger.info("result: {} in {} iterations\n".format(distance, iterations))
-    return distance, iterations, rad
+    return distance, iterations, rad, total_time
 
 
 def plot(data: List[Method_stats], tuple_id: int,
          name: str, x_label: str, x_log: bool = False, range_gen=None):
     range_gen = range_gen or range(1, len(data) + 1)
-    name += (" dist", " iter", " spec")[tuple_id]
 
+    name = "Funkcja " + (" odległości",
+                         " liczby iteracji",
+                         " promienia spektralnego")[tuple_id] + name
     plt.clf()
     plt.figure(num=1, figsize=(10, 20), dpi=100)
-    plt.title(name)
-    plt.ylabel(("distance in maximum metric",
-                "number of iterations",
-                "spectral radius")[tuple_id])
+    # plt.title(name)
+    plt.ylabel(("Odległość w metyce maksimum",
+                "Liczba iteracji",
+                "Promień spektralny")[tuple_id])
     plt.xlabel(x_label)
     if tuple_id == 0:
         plt.semilogy()
     if x_log:
         plt.semilogx()
 
-    plt.plot(range_gen, list(d[tuple_id] for d in data),
-             label=name)
+    plt.plot(range_gen, list(d[tuple_id] for d in data))
 
-    plt.legend(loc='lower left')
+    # plt.legend(loc='center left')
+    plt.tight_layout()
     plt.savefig("data/" + name + ".pdf")
-    plt.show()
+    # plt.show()
 
 
 end_functions = {
@@ -233,9 +228,9 @@ def test_size(end_fun: End_fun_sig, method: Method_signature):
         logger.info("size: {}".format(i))
         data.append(single_test(i, end_fun, method=method))
 
-    name = methods_inv(method) + \
-        end_functions[end_fun] + " matrix size test"
-    x_label = "size of the matrix"
+    name = " od rozmiaru macierzy z warunkiem stopu {} dla metody {}" \
+        .format(methods_inv(method), end_functions[end_fun])
+    x_label = "Rozmiar macierzy A"
 
     for i in range(3):
         plot(data, i, name, x_label)
@@ -251,10 +246,10 @@ def test_vector(end_fun: End_fun_sig, method: Method_signature):
         data.append(single_test(DEFAULT_MATRIX_SIZE, end_fun, method=method,
                                 initial_guess=initial_guess))
 
-    name = methods_inv(method) + \
-        end_functions[end_fun] + " matrix initial guess test"
-
-    x_label = "numbers in guess vector"
+    name = " od liczb w wektorze startowym z " \
+           "warunkiem stopu {} dla metody {}" \
+        .format(methods_inv(method), end_functions[end_fun])
+    x_label = "Liczba w wektorze startowym"
 
     for i in range(3):
         plot(data, i, name, x_label, x_log=True, range_gen=range_gen)
@@ -263,14 +258,14 @@ def test_vector(end_fun: End_fun_sig, method: Method_signature):
 def test_epsilon(end_fun: End_fun_sig, method: Method_signature):
     logger.info("epsilon test")
     data = []
-    range_gen = list(2 ** -j for j in range(0, MAX_POW_EPS))
+    range_gen = list(2 ** -j for j in range(8, MAX_POW_EPS))
     for i in range_gen:
         logger.info("size: {}".format(i))
         data.append(single_test(DEFAULT_MATRIX_SIZE, end_fun,
                                 epsilon=i, method=method))
 
-    name = methods_inv(method) + \
-        end_functions[end_fun] + " matrix epsilon test"
+    name = " od epsilonu z warunkiem stopu {} dla metody {}" \
+        .format(methods_inv(method), end_functions[end_fun])
     x_label = "epsilon"
 
     for i in range(3):
@@ -279,7 +274,7 @@ def test_epsilon(end_fun: End_fun_sig, method: Method_signature):
 
 def test_SOR_factor(end_fun: End_fun_sig,
                     method: Method_signature = methods['SOR'],
-                    interval: List[float]=None):
+                    interval: List[float] = None):
     if method != methods['SOR']:
         return
 
@@ -288,16 +283,16 @@ def test_SOR_factor(end_fun: End_fun_sig,
 
     if not interval:
         interval = list(float(j) / SOR_SCALE
-                        for j in range(-3 * SOR_SCALE, 3 * SOR_SCALE + 1, 1)
+                        for j in range(-0 * SOR_SCALE, 2 * SOR_SCALE + 1, 1)
                         if j != 0)
     for w in interval:
         logger.info("SOR parameter: {}".format(w))
         data.append(single_test(DEFAULT_MATRIX_SIZE, end_fun,
                                 factor=w, method=method))
 
-    name = methods_inv(method) + \
-        end_functions[end_fun] + " SOR parameter test"
-    x_label = "parameter"
+    name = " od parametru SOR z warunkiem stopu {} dla metody {}" \
+        .format(methods_inv(method), end_functions[end_fun])
+    x_label = "parameter metody SOR"
 
     for i in range(3):
         plot(data, i, name, x_label, range_gen=interval)
@@ -311,10 +306,48 @@ def experiment():
         test_SOR_factor(fun, methods['SOR'])
 
 
+def compare(matrix_size=100):
+    a = []
+    aa = []
+    data1 = []
+    data2 = []
+    for i in range(1, matrix_size):
+        w2 = single_test(i, end_function_2, method=methods['SOR'])
+        epsilon = w2[0]
+        w1 = single_test(i, end_function_1, method=methods['SOR'],
+                         epsilon=epsilon)
+
+        a.append(w1[0])
+        aa.append(w2[0])
+        data1.append(w1[3])
+        data2.append(w2[3])
+
+    plt.xlabel("Rozmaiar macierzy A")
+    plt.ylabel("Czas obliczania [s]")
+    plt.plot(range(1, matrix_size), data1, label=end_functions[end_function_1])
+    plt.plot(range(1, matrix_size), data2, label=end_functions[end_function_2])
+    plt.figure(num=1, figsize=(10, 20), dpi=100)
+    plt.legend(loc='upper left')
+    plt.tight_layout()
+    plt.savefig("data/" + "compare" + ".pdf")
+
+    plt.clf()
+    plt.xlabel("Rozmaiar macierzy A")
+    plt.ylabel("Błąd względem poprawnego wyniku")
+    plt.plot(range(1, matrix_size), a, label=end_functions[end_function_1])
+    plt.plot(range(1, matrix_size), aa, label=end_functions[end_function_2])
+    plt.figure(num=1, figsize=(10, 20), dpi=100)
+    plt.legend(loc='upper left')
+    plt.tight_layout()
+    plt.savefig("data/" + "compare2" + ".pdf")
+
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     handler = logging.FileHandler('results.txt', mode='w')
     handler.setLevel(logging.INFO)
     logger.addHandler(handler)
 
-    experiment()
+    # experiment()
+
+    compare()

@@ -1,4 +1,4 @@
-from random import choice
+from random import choice, seed
 import copy
 import itertools
 import logging
@@ -22,6 +22,7 @@ def get_matrix(fun, n):
 
 def get_vertical_vector_x(n, random=lambda: choice((-1, 1))):
     assert n >= 1
+    seed(7)
     return [[random()] for _ in range(n)]
 
 
