@@ -4,25 +4,28 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-DEF_EPS = 1e-10
+DEF_EPS = 1e-2
 MAX_ITER = 100
 
 
 def end_function_1(_, epsilon=DEF_EPS):
     def end(old_x, new_x):
         return abs(old_x - new_x) < epsilon
+
     return end
 
 
 def end_function_2(fun, epsilon=DEF_EPS):
     def end(_, new_x):
         return abs(fun(new_x)) < epsilon
+
     return end
 
 
 def derivative(fun, epsilon=DEF_EPS):
     def der(x):
         return (fun(x + epsilon) - fun(x)) / epsilon
+
     return der
 
 
@@ -60,107 +63,96 @@ def secant_method(fun, end_function, start_a, start_b):
 
 
 functions = {
-    "x^10-(1-x)^15": lambda x: x**10-(1-x)**15,
-    "x^2": lambda x: x*x,
-    "x^2-4": lambda x: x*x-4,
-    "x^6+x": lambda x: x**6+x,
-    "(x-1)e^-2x+x^2": lambda x: (x-1)*np.e**(-2*x)+x*x,
+    "x^10-(1-x)^15": lambda x: x ** 10 - (1 - x) ** 15,
+    "x^2": lambda x: x * x,
+    "x^2-4": lambda x: x * x - 4,
+    "x^6+x": lambda x: x ** 6 + x,
+    "(x-1)e^-2x+x^2": lambda x: (x - 1) * np.e ** (-2 * x) + x * x,
 }
 
-def find(eps, end):
-    data = {}
+end_functions = {
+    "|x(i+1)-x(i)|<p": end_function_1,
+    "|f(x(i))|<p": end_function_2,
+}
+
+methods = {
+    "metoda siecznych": secant_method,
+    "metoda newtona": newton_method,
+}
+
+
+def end_functions_inv(end):
+    return next(k for k, v in end_functions.items() if v == end)
+
+
+def methods_inv(met):
+    return next(k for k, v in methods.items() if v == met)
+
+
+def _find(epsilon, method_str, end_function_str, inc=True):
+    inc_str = "zwiekszanie" if inc else "zmniejszanie"
+    logger.info(method_str + end_function_str + " " + inc_str)
+
     fun_name = "x^10-(1-x)^15"
     f = functions[fun_name]
-    pattern = "miejce zerowe: {} w iteracjach {}, parametry startowe: {} oraz 2.1 "
-    logger.info("\n\n")
-    logger.info("obliczenia dla funkcji: " + fun_name
-                + " w przedziale [0.1, 2.1] dla epsilon={}".format(eps))
+    start_x = 0.1
+    end_x = 2.1
+    results = []
+    pattern = "miejce zerowe: {} w iteracjach {}" + \
+              (" parametry startowe: {:2.1f} oraz {:2.1f} "
+               if method_str == "metoda siecznych"
+               else " parametr startowy {:2.1f}")
+    method = methods[method_str]
+    end_function = end_functions[end_function_str]
 
-    tmp = []
-    logger.info("metoda siecznych |x(i+1)-x(i)|<p - zwiekszanie")
-    x = 0.1
     for _ in range(20):
-        zero, iteration = secant_method(f, end_function_1(f,  eps), x, 2.1)
-        logger.info(pattern.format(zero, iteration, x))
-        tmp.append((x, iteration))
-        x += 0.1
-    data['s1'] = tmp
+        zero, iteration = method(f, end_function(f, epsilon), start_x, end_x)
+        logger.info(pattern.format(zero, iteration, start_x, end_x))
+        results.append((start_x if inc else end_x, zero, iteration))
 
-    tmp = []
-    logger.info("metoda siecznych |f(x(i))|<p - zwiekszanie")
-    x = 0.1
-    for _ in range(20):
-        zero, iteration = secant_method(f, end_function_2(f, eps), x, 2.1)
-        logger.info(pattern.format(zero, iteration, x))
-        tmp.append((x, iteration))
-        x += 0.1
-    data['s2'] = tmp
+        if inc:
+            start_x += 0.1
+        else:
+            end_x -= 0.1
+
+    return results
 
 
-    pattern = "miejce zerowe: {} w iteracjach {}, parametry startowe: 0.1 oraz {}"
+def find(eps, end):
+    end1 = "|x(i+1)-x(i)|<p"
+    end2 = "|f(x(i))|<p"
+    dec = " zmniejszajac x"
+    sec = "metoda siecznych"
+    newt = "metoda newtona"
 
-    logger.info("metoda siecznych |x(i+1)-x(i)|<p - zmniejszanie")
-    x = 2.1
-    tmp = []
-    for _ in range(20):
-        zero, iteration = secant_method(f, end_function_1(f, eps), 0.1, x)
-        logger.info(pattern.format(zero, iteration, x))
-        tmp.append((x, iteration))
-        x -= 0.1
-    data["s1d"] = tmp
+    data_dict = {
+        sec + " " + end1: _find(eps, sec, end1),
+        sec + " " + end2: _find(eps, sec, end2),
+        sec + " " + end1 + dec: _find(eps, sec, end1, inc=False),
+        sec + " " + end2 + dec: _find(eps, sec, end2, inc=False),
+        newt + " " + end1: _find(eps, newt, end1),
+        newt + " " + end2: _find(eps, newt, end2),
+    }
 
-    logger.info("metoda siecznych |f(x(i))|<p - zmniejszanie")
-    x = 2.1
-    tmp = []
-    for _ in range(20):
-        zero, iteration = secant_method(f, end_function_2(f, eps), 0.1, x)
-        logger.info(pattern.format(zero, iteration, x))
-        tmp.append((x, iteration))
-        x -= 0.1
-    data['s2d'] = tmp
-
-    pattern = "miejce zerowe: {} w iteracjach {}, parametr startowy: {}"
-
-    logger.info("metoda newtona |x(i+1)-x(i)|<p")
-    x = 0.1
-    tmp = []
-    for _ in range(20):
-        zero, iteration = newton_method(f, end_function_1(f, eps), x)
-        logger.info(pattern.format(zero, iteration, x))
-        tmp.append((x, iteration))
-        x += 0.1
-    data["n1"] = tmp
-
-    logger.info("metoda newtona |f(x(i))|<p ")
-    x = 0.1
-    tmp = []
-    for _ in range(20):
-        zero, iteration = newton_method(f, end_function_2(f, eps), x)
-        logger.info(pattern.format(zero, iteration, x))
-        tmp.append((x, iteration))
-        x += 0.1
-    data['n2'] = tmp
-
-
-
-    def get_id(d, id):
-        for dd in d:
-            yield dd[id]
-
-    def pl(d, name):
-        plt.plot(list(get_id(d, 0)), list(get_id(d, 1)), label=name)
-        plt.legend(loc='upper left')
-        plt.ylabel("liczba iteracji")
+    def plot(name, data, t='i'):
+        start_point, zero, iteration = list(zip(*data))
+        plt.clf()
+        plt.plot(start_point, iteration if t == 'i' else zero, label=name)
+        plt.legend(bbox_to_anchor=(0., 1.05, 1., .102), loc=3,
+                   mode="expand", borderaxespad=0.)
+        # locs, labels = plt.yticks()
+        # locs = [0.42, 0.43, 0.44]
+        # plt.yticks(locs, map(lambda x: "{:.2f}".format(x), locs))
+        plt.ylabel("liczba iteracji" if t == 'i' else "obliczony punkt zerowy")
         plt.xlabel("punkt startowy")
+        plt.tight_layout()
+
         if end:
-            plt.savefig(name + ".pdf")
-        #plt.show()
+            plt.savefig("data/" + name + ".pdf")
+            # plt.show()
 
-
-    pl(data["n1"], "newton x1-x2 {}".format(eps))
-
-
-
+    for name, data in data_dict.items():
+        plot(name, data, 'h')
 
 
 if __name__ == "__main__":
@@ -169,24 +161,20 @@ if __name__ == "__main__":
     handler.setLevel(logging.INFO)
     logger.addHandler(handler)
 
-    function_name = "x^10-(1-x)^15" # "(x-1)e^-2x+x^2"
+    function_name = "x^10-(1-x)^15"
     fun = functions[function_name]
 
-    e = 1e-4
-    for w in range(4):
-        find(e, w == 3)
-        e /= 100
+    # for epsilon in (1e-14,):
+    #     find(epsilon, True)
 
-    # x_0, n_it = secant_method(fun, end_function_1(fun), -12., 11.)
-    # logger.info("x_0: {}, iterations: {}".format(x_0, n_it))
-    #
-    # x_0, n_it = newton_method(fun, end_function_1(fun), -12., 11.)
-    # logger.info("x_0: {}, iterations: {}".format(x_0, n_it))
-    #
-    # xx = np.linspace(0.1, 2.1, 20)
-    # yy = list(fun(i) for i in xx)
+    plt.subplot(111)
+    x = np.linspace(0.1, 2.1, 100)
+    y = fun(x)
 
-    # plt.plot(xx, yy, label="f(x)=" + function_name)
-    # plt.plot((0.1, 2.1), (0, 0), label="f(x)=0")
-    # plt.legend(loc='upper left')
+    plt.xlabel("zmienna x")
+    plt.ylabel("wartość zmiennej y")
+    plt.plot(x, y, label="f(x)="+function_name)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig("data/" + "zad1" + ".png")
     # plt.show()
