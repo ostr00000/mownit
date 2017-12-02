@@ -1,6 +1,7 @@
 import numpy as np
 from typing import List
 import matplotlib.pyplot as plt
+from lab1.band_matrix import thomas_algorithm
 from itertools import zip_longest
 
 
@@ -21,52 +22,63 @@ fun_der = derivative(fun)
 left, right = 0.1, 0.8
 
 
-def coef(x_val: List[float], y_val: List[float], alpha=0, beta=0):
+def coef(x_val: List[float], y_val: List[float],
+         bound_condition='natural', alpha=0, beta=0):
     n = len(x_val)
     assert n == len(y_val)
 
-    # | mid[0] top[0] ...                         | | tmp[0] | | vector_b[0] |
-    # | bot[1] mid[1] top[1] ...                  | | tmp[1] | | vector_b[1] |
-    # | ...    bot[2] mid[2] top[2] ...           | | tmp[2] | | vector_b[2] |
-    # |                 ...                       |x|   ...  |=|     ...     |
-    # | ...             bot[n-1] mid[n-1] top[n-1]| |tmp[n-1]| |vector_b[n-1]|
-    # | ...                       bot[n]   mid[n] | | tmp[n] | | vector_b[n] |
-
-    # allocate space for matrix
-    top, mid = [0] * n, [0] * n
+    top, mid, bot = [0] * n, [0] * n, [0] * n
     vector_b = [0] * n
     n -= 1
     h = [x_val[i + 1] - x_val[i] for i in range(n)]
 
-    # first row values
-    top[0] = 0
-    mid[0] = 1
-    vector_b[0] = alpha
+    if bound_condition == 'natural':
+        # first row values
+        top[0] = 0
+        mid[0] = 1
+        bot[0] = None
 
-    # prepare vector b
+        # last row values
+        top[n] = None
+        mid[n] = 1
+        bot[n] = 0
+
+        # vector_b bound conditions
+        vector_b[0] = alpha
+        vector_b[n] = beta
+
+    elif bound_condition == 'clamped':
+        top[0] = h[0]
+        mid[0] = 2 * h[0]
+        bot[0] = None
+
+        top[n] = None
+        mid[n] = 2 * h[-1]
+        bot[n] = h[-1]
+
+        vector_b[0] = -0.5 * alpha * h[0] ** 2 + 3 * (y_val[1] - y_val[0])
+        vector_b[n] = 0.5 * beta * h[-1] ** 2 + 3 * (y_val[-1] - y_val[-2])
+
+    else:
+        raise TypeError("unknown boundary condition")
+
+    # prepare vector b and tridiagonal matrix A
     for i in range(1, n):
         part1 = 3 * (y_val[i + 1] - y_val[i]) / h[i]
         part2 = 3 * (y_val[i] - y_val[i - 1]) / h[i - 1]
         vector_b[i] = part1 - part2
 
-    for i in range(1, n):
-        mid[i] = 2 * (x_val[i + 1] - x_val[i - 1])  # 2 * (h[i] + h[i+1])
-        mid[i] -= h[i - 1] * top[i - 1]  # sub row i-1 (to zero bot[i])
+        top[i] = h[i]
+        mid[i] = 2 * (h[i - 1] + h[i])
+        bot[i] = h[i - 1]
 
-        # all elem on row_i are divided by mid[i] (after that mid[i] will be 1)
-        top[i] = h[i] / mid[i]
+    # solve by thomas algorithm A*x=b
+    c = thomas_algorithm((top, mid, bot), [[i] for i in vector_b])
+    c = [i[0] for i in c]
 
-        # sub in vector_b
-        vector_b[i] -= h[i - 1] * vector_b[i - 1]
-        vector_b[i] /= mid[i]
-
-    # allocate space for coefficients
     a = y_val[:]
     b, d = [0] * n, [0] * n
-    c = [0] * n + [beta]
-
     for i in range(n - 1, -1, -1):
-        c[i] = vector_b[i] - top[i] * c[i + 1]
         b[i] = (a[i + 1] - a[i]) / h[i] - h[i] * (2 * c[i] + c[i + 1]) / 3
         d[i] = (c[i + 1] - c[i]) / (h[i] * 3)
 
@@ -122,5 +134,5 @@ def plot_function(fun=lambda x: x ** 2, left=-1., right=1., num=10):
 
 
 if __name__ == '__main__':
-    fun = lambda x: x**2
+    fun = lambda x: x ** 2
     plot_function(fun, left, right, num=10)
