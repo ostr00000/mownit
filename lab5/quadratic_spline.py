@@ -5,6 +5,15 @@ from itertools import zip_longest
 from lab5.cubic_spline import derivative
 
 
+def norm(y_original, y_interpolated):
+    norm_max = 0
+    norm_2 = 0
+    for y1, y2 in zip(y_original, y_interpolated):
+        norm_max = max(norm_max, abs(y1 - y2))
+        norm_2 += (y1 - y2) * (y1 - y2)
+    return norm_max, norm_2
+
+
 class BoundCondition(NamedTuple):
     is_left: bool = True
     value: float = 0.
@@ -62,23 +71,55 @@ def spline_to_x_y(coef_and_x, num_of_points):
 if __name__ == "__main__":
     left = 0.1
     right = 0.8
-    points_num = 10
+    points_num = 5
 
     def fun(x):
         return x * np.sin(0.8 * np.pi / x)
 
-    x = list(np.linspace(left, right, points_num))
-    y = list(map(fun, x))
 
-    abc_x = coef(x, y, BoundCondition(value=derivative(fun)(left)))
-    xx, yy = spline_to_x_y(abc_x, 100 * points_num)
+    data = []
+    for i in range(3, 200):
+        points_num = i
+        x = list(np.linspace(left, right, points_num))
+        y = list(map(fun, x))
 
-    org_x = list(np.linspace(left, right, points_num ** 2 * 10))
-    org_y = list(map(fun, org_x))
+        abc_x = coef(x, y, BoundCondition(value=derivative(fun)(right), is_left=False))
+        xx, yy = spline_to_x_y(abc_x, 1000)
 
-    plt.plot(xx, yy, label="f(x)-interp")
-    plt.plot(org_x, org_y, label="f(x)-org")
-    plt.plot([left, right], [0, 0], label="f(x)=0")
-    plt.scatter(x, y)
-    plt.legend()
-    plt.show()
+        org_x = list(np.linspace(left, right, 1000))
+        org_y = list(map(fun, xx))
+
+        data.append((i, *norm(org_y, yy)))
+        # print(data[-1])
+
+        if 15 == i:
+            fig = plt.figure(figsize=(10, 20), dpi=100)
+            ax = fig.add_subplot(111)
+
+            plt.plot(xx, yy, label="f(x) funkcja interpolujaca")
+
+            ax.plot(xx, org_y, label="f(x) = x * sin(0.8 * pi / x)")
+            ax.plot([left, right], [0, 0], label="f(x)=0")
+            ax.legend()
+
+            ax.set_xlabel("x")
+            ax.set_ylabel("f(x)")
+            ax.scatter(x, y)
+            plt.show()
+            fig.savefig("test.pdf")
+
+
+    # data = list(zip(*data))
+    #
+    # fig = plt.figure(figsize=(10, 20), dpi=100)
+    # ax = fig.add_subplot(111)
+    # ax.plot(data[0], data[2], label="błąd średniokwadratoey")
+    # ax.plot(data[0], data[1], label="błąd w metryce maksimum")
+    # ax.set_xlabel("liczba węzłów", size=15)
+    # ax.semilogy()
+    # ax.set_ylabel("wartość błędu", size=15)
+    # ax.legend()
+    # plt.show()
+    # fig.savefig("test.pdf")
+
+

@@ -17,8 +17,6 @@ def derivative(func, eps=1e-6):
 def fun(x):
     return x * np.sin(0.8 * np.pi / x)
 
-
-fun_der = derivative(fun)
 left, right = 0.1, 0.8
 
 
@@ -104,12 +102,12 @@ def spline_to_x_y(coef_and_x, num_of_points):
     return x, y
 
 
-def plot_function(fun=lambda x: x ** 2, left=-1., right=1., num=10):
+def plot_function(fun=fun, left=-1., right=1., num=10):
     x = np.linspace(left, right, num)
     y = list(map(fun, x))
-    coef_and_x = coef(list(x), y,
-                      alpha=fun_der(left, 2),
-                      beta=fun_der(right, 2))
+    coef_and_x = coef(list(x), y, bound_condition='clamped',
+                      alpha=derivative(fun)(left, 2),
+                      beta=derivative(fun)(right, 2))
 
     plot_points = 1000
     plt.subplot(111)
@@ -134,5 +132,4 @@ def plot_function(fun=lambda x: x ** 2, left=-1., right=1., num=10):
 
 
 if __name__ == '__main__':
-    fun = lambda x: x ** 2
-    plot_function(fun, left, right, num=10)
+    plot_function(fun, left, right, num=3)
