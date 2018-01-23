@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
+from scipy.linalg import solve_banded
 
 left = 0
 right = np.pi
@@ -24,6 +25,7 @@ def psi_right(time):
     return B
 
 
+
 def differential_equation(time_div, x_div):
     arr = np.zeros(shape=(time_div + 1, x_div + 1))
 
@@ -43,24 +45,33 @@ def differential_equation(time_div, x_div):
     print("wspolczynnik = {}".format(coefficient))
 
     coef = h * h / a * a / k
-    for t in range(1, time_div + 1):
-        matrix = np.zeros(shape=(x_div + 1, x_div + 1))
-        vector = np.zeros(x_div + 1)
+    middle_coef = 2 + coef
 
-        matrix[0, 0] = 1
-        matrix[x_div, x_div] = 1
+    assert x_div > 3
+    top, mid, bot = [0, 0], [1, middle_coef], [-1, -1]
+    for t in range(2, x_div - 1):
+        top.append(-1)
+        mid.append(middle_coef)
+        bot.append(-1)
+
+    top.extend([-1, -1])
+    mid.extend([middle_coef, 1])
+    bot.extend([0, 0])
+
+    band_matrix = np.array([top, mid, bot])
+
+    for t in range(1, time_div + 1):
+        vector = np.zeros(x_div + 1)
 
         vector[0] = arr[t, 0]
         vector[x_div] = arr[t, x_div]
 
         for i in range(1, x_div):
-            matrix[i, i] = 2 + coef
-            matrix[i, i - 1] = -1
-            matrix[i, i + 1] = -1
             vector[i] = arr[t - 1, i] * coef
 
-        result = np.linalg.solve(matrix, vector)
+        result = solve_banded((1, 1), band_matrix, vector)
         arr[t] = result
+        print(result)
 
     return [x_values, t_values, arr]
 
